@@ -58,6 +58,3 @@ class Preprocess:
 			print ingredient_count[i][0], ingredient_count[i][1] 
 
 
-
-p = Preprocess()
-p.print_info()

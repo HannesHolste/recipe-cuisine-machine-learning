@@ -73,6 +73,3 @@ class Preprocess:
         for i in range(0, 25):
             print ingredient_count[i][0], ingredient_count[i][1]
 
-
-p = Preprocess()
-p.print_info()

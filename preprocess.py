@@ -49,7 +49,7 @@ class Preprocess:
         # remove food adjectives
         for adjective in self.food_adjectives:
             # only substitute adjectives if they appear as independent words, e.g. replace "or" in "toast or bacon", not "pORk"
-            ingredient_name = regex.sub(u"(" + adjective + " |" + adjective + "or)", " ", ingredient_name)
+            ingredient_name = regex.sub(u"(" + adjective + " |" + adjective + " )", " ", ingredient_name)
 
         # remove excess spaces
         ingredient_name = " ".join(ingredient_name.split())

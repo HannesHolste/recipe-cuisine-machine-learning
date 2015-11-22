@@ -10,6 +10,7 @@ class Preprocess:
     ingredient_list = defaultdict(list)
     ingredient_set = set()
     data = []
+    counts = defaultdict(int)
 
     def __init__(self):
         self.load_data()
@@ -45,8 +46,8 @@ class Preprocess:
                 # always lowercase ingredient names
                 ingredient = ingredient.lower()
 
-                ingredient = func_process_ingredient(ingredient)
-
+                #ingredient = func_process_ingredient(ingredient)
+                self.counts[(cuisine,ingredient)] += 1
                 self.ingredient_list[ingredient].append(datum)
                 self.ingredient_set.add(ingredient)
 

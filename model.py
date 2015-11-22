@@ -3,7 +3,7 @@ import random
 
 memo = {}
 
-def calculate_score(cuisines_list, cuisine_set, cuisine, ingredient_list, datum):
+def calculate_score(cuisines_list, cuisine_set, cuisine, ingredient_list, datum, counts):
     score = 0.0
     recipes_in_cuisine = 0.0
     recipes_not_in_cuisine = 0.0
@@ -19,13 +19,9 @@ def calculate_score(cuisines_list, cuisine_set, cuisine, ingredient_list, datum)
             score += memo[(curr_cuisine, ingredient)]
             continue
     
-        times_ingredient_in_cuisine = 0.0
-        times_ingredient_not_in_cuisine = 0.0
-        for recipe in ingredient_list[ingredient]:
-            if cuisine == recipe['cuisine']:
-                times_ingredient_in_cuisine += 1.0
-            else:
-                times_ingredient_not_in_cuisine += 1.0
+        times_ingredient_in_cuisine = counts[(cuisine, ingredient)]
+        times_ingredient_not_in_cuisine = len(ingredient_list[ingredient]) - times_ingredient_in_cuisine
+
         memo[(cuisine, ingredient)] = times_ingredient_in_cuisine/recipes_in_cuisine - times_ingredient_not_in_cuisine/recipes_not_in_cuisine
         score += times_ingredient_in_cuisine/recipes_in_cuisine - times_ingredient_not_in_cuisine/recipes_not_in_cuisine
     return score
@@ -38,7 +34,7 @@ def get_prediction(p, data):
         curr_best_prediction = "OOPS"
         curr_best_score = float("-inf")
         for cuisine in p.cuisines_set:
-            score = calculate_score(p.cuisines, p.cuisines_set, cuisine, p.ingredient_list, datum)
+            score = calculate_score(p.cuisines, p.cuisines_set, cuisine, p.ingredient_list, datum, p.counts)
             if score > curr_best_score:
                 curr_best_score = score
                 curr_best_prediction = cuisine
@@ -55,7 +51,7 @@ def calc_error(predictions, label):
 def main():
     p = Preprocess()
     data = p.data
-    validation_set = data[:200]
+    validation_set = data[:100]
     predictions = get_prediction(p, validation_set)
     correct_answers = [datum['cuisine'] for datum in validation_set]
     print "Error Rate:", calc_error(predictions, correct_answers)

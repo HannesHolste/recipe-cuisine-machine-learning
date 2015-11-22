@@ -19,16 +19,34 @@ class Preprocess:
             data = json.load(data_file)
             return data
 
-    def load_data(self):
+    @staticmethod
+    def process_ingredient(ingredient_name):
+        ingredient_name = ingredient_name.decode('unicode_escape').encode('ascii','ignore')
+
+        return ingredient_name
+
+    def load_data(self, func_process_ingredient=lambda s: s):
         default_data_dir = "data/train.json"
         self.data = self.parseData(default_data_dir)
+
+        # For each recipe...
         for datum in self.data:
+
+            # process cuisine
             cuisine = datum['cuisine'].lower()
+
             self.cuisines[cuisine].append(datum)
             self.cuisines_set.add(cuisine)
+
+            # process ingredients
             ingredients = datum['ingredients']
+
             for ingredient in ingredients:
+                # always lowercase ingredient names
                 ingredient = ingredient.lower()
+
+                ingredient = func_process_ingredient(ingredient)
+
                 self.ingredient_list[ingredient].append(datum)
                 self.ingredient_set.add(ingredient)
 

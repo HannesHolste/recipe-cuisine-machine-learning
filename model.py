@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 import time
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
 
@@ -215,6 +215,35 @@ class LogisticRegressionModel(Model):
         # transform labels back to text
         return self.label_encoder.inverse_transform(Y_predicted)
 
+class LogisticRegressionModelTfidf(LogisticRegressionModel):
+    tfidf = None
+
+    def __init__(self, sublinear_tf=False, norm=None):
+        super(self.__class__, self).__init__()
+        self.tfidf = TfidfTransformer(sublinear_tf=sublinear_tf, norm=norm)
+
+
+    def get_name(self):
+        return "Logistic Regression with bag of ingredients (unigrams) and tf-idf"
+
+    def featurize(self, data):
+        data_X = [self.TOKEN_INGREDIENT_SEPARATOR.join(r['ingredients']) for r in data]
+        counts = self.ngram_vectorizer.transform(data_X)
+        return self.tfidf.transform(counts).toarray()
+
+    def train(self, data_train):
+        X_train = [self.TOKEN_INGREDIENT_SEPARATOR.join(recipe['ingredients']) for recipe in data_train]
+        Y_train = [recipe['cuisine'] for recipe in data_train]
+
+
+        # transform features
+        X_train = self.ngram_vectorizer.fit_transform(X_train)
+        X_train = self.tfidf.fit_transform(X_train).toarray()
+        # transform labels to distinct ints
+        Y_train = self.label_encoder.fit_transform(Y_train)
+
+        self.logistic_regression.fit(X_train, Y_train)
+        return
 
 MILLISECS_TO_SECS_DIVISOR = 1000
 
@@ -245,7 +274,8 @@ def main():
     models = [BaselineModel(),
               RandomGuessModel(cuisines=list(p.cuisines_set)),
               RandomForestModel(),
-              LogisticRegressionModel()
+              LogisticRegressionModel(),
+              LogisticRegressionModelTfidf(sublinear_tf=True, norm="l2")
               ]
 
     # calculate correct labels for error calc later

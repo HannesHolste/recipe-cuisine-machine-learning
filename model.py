@@ -44,7 +44,7 @@ class Model(object):
 
 class BaselineModel(Model):
     def get_name(self):
-        return 'Baseline'
+        return 'Baseline (always guess italian)'
 
     # Simply always predict italian, the most popular cuisine in our training data set
     def predict(self, X):
@@ -155,7 +155,7 @@ class RandomForestModel(Model):
         return
 
     def get_name(self):
-        return "Random Forest Classifier"
+        return "Random Forest Classifier with bag-of-ingredients (unigrams)"
 
     def featurize(self, data):
         data_X = [self.TOKEN_INGREDIENT_SEPARATOR.join(r['ingredients']) for r in data]
@@ -191,7 +191,7 @@ class LogisticRegressionModel(Model):
         return
 
     def get_name(self):
-        return "Logistic Regression"
+        return "Logistic Regression with bag-of-ingredients (unigrams)"
 
     def featurize(self, data):
         data_X = [self.TOKEN_INGREDIENT_SEPARATOR.join(r['ingredients']) for r in data]
@@ -249,7 +249,8 @@ def main():
               ]
 
     # calculate correct labels for error calc later
-    Y_actual = [datum['cuisine'] for datum in data_validation]
+    Y_actual_validation = [datum['cuisine'] for datum in data_validation]
+    Y_actual_train = [datum['cuisine'] for datum in data_train]
 
     print "Models to be run: ", ", ".join([model.get_name() for model in models])
     for model in models:
@@ -264,14 +265,26 @@ def main():
         print "\tDone (%d s)\n" % ((end - start))
 
         # make predictions and calculate error
+
+        # training set
+        print "\tMaking %d predictions on training set..." % len(data_train)
+        start = time.time()
+        Y_predicted = model.predict(model.featurize(data_train))
+        end = time.time()
+        print "\tDone (%d s)\n" % ((end - start))
+
+        print "\t Calculating training set error..."
+        print "\t Error rate: %f" % model.calc_error(Y_predicted, Y_actual_train)
+
+        # validation set
         print "\tMaking %d predictions on validation set..." % len(data_validation)
         start = time.time()
         Y_predicted = model.predict(model.featurize(data_validation))
         end = time.time()
         print "\tDone (%d s)\n" % ((end - start))
 
-        print "\t Calculating error..."
-        print "\t Error rate: %f" % model.calc_error(Y_predicted, Y_actual)
+        print "\t Calculating validation set error..."
+        print "\t Error rate: %f" % model.calc_error(Y_predicted, Y_actual_validation)
 
 
 main()

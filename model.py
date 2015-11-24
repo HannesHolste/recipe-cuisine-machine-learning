@@ -8,6 +8,7 @@ from sklearn.preprocessing import LabelEncoder
 
 from preprocess import Preprocess
 import random
+import math
 
 
 class Model(object):
@@ -72,11 +73,86 @@ class RandomGuessModel(Model):
         else:
             return random.choice(self.CUISINES)
 
-class CustomScoreModel(Model):
+class CustomScoreModel1(Model):
     memo = {}
+    p = None
+
+    def __init__(self, preprocessor):
+        self.p = preprocessor
 
     def get_name(self):
-        return "Custom Score Model"
+        return "Normalized tf-idf Ranking of Ingredients"
+
+    def train(self, data_train):
+        return 
+
+    def tfidf_max_normalized(self, cuisines_list, cuisine_set, ingredient_list, datum, counts):
+        score = 0.0
+        length = 0.0
+        score_board = []
+        index_of_cuisine = []
+        for c in cuisine_set:
+            length += len(cuisines_list[c])
+            score_board.append((0.0, c))
+            index_of_cuisine.append(c)
+
+        counter = 0
+
+        for ingredient in datum['ingredients']:
+            a = []
+            for cuisine in cuisine_set:
+                tf = counts[(cuisine, ingredient)]
+                df = float(len(ingredient_list[ingredient]))
+                idf = math.log(length/df)
+                score += tf * idf
+                a.append((score,cuisine))
+            minimum = float("inf")
+            for (score, cuisine) in a:
+                if score < minimum:
+                    minimum = score
+            
+            normalized_a = [(score/( 1), cuisine1) for (score, cuisine1) in a]
+
+            for i in range(0, len(score_board)):
+                (prev_score, cuisine1) = normalized_a[i]
+                (curr_score, cuisine2) = score_board[i]
+                if not(cuisine1 == cuisine2):
+                    print "Edwards Fault"
+                score_board[i] = (prev_score + curr_score, cuisine1)
+
+        curr_best = float("-inf")
+        curr_prediction = "edwardmessedup"
+        for (score, prediction) in score_board:
+            if score >= curr_best:
+                curr_best = score
+                curr_prediction = prediction
+        return curr_prediction
+
+    def featurize(self, data):
+        return data
+
+    def predict(self, data):
+        predictions = []
+        print "Length of dataset predictions", len(data)
+        for datum in data:
+            curr_best_prediction = "ERROR"
+            curr_best_score = float("-inf")
+            prediction = self.tfidf_max_normalized(self.p.cuisines, self.p.cuisines_set, self.p.ingredient_list, datum, self.p.counts)
+            predictions.append(prediction)
+        return predictions
+
+class CustomScoreModel(Model):
+    memo = {}
+    p = None
+
+    def __init__(self, preprocessor):
+        self.p = preprocessor
+
+    def get_name(self):
+        return "Vanilla tf-idf Ranking of Ingredients"
+
+    def train(self, data_train):
+        return 
 
     def calculate_score1(self, cuisines_list, cuisine_set, cuisine, ingredient_list, ingredient, counts):
         score = 0.0
@@ -101,6 +177,18 @@ class CustomScoreModel(Model):
         score += times_ingredient_in_cuisine/recipes_in_cuisine - times_ingredient_not_in_cuisine/recipes_not_in_cuisine
         return score
 
+    def tfidf(self, cuisines_list, cuisine_set, cuisine, ingredient_list, datum, counts):
+        score = 0.0
+        length = 0.0
+        for c in cuisine_set:
+            length += len(cuisines_list[c])
+
+        for ingredient in datum['ingredients']:
+            tf = counts[(cuisine, ingredient)]
+            df = float(len(ingredient_list[ingredient]))
+            idf = math.log(length/df)
+            score += tf * idf
+        return score
 
     def calculate_score(self, cuisines_list, cuisine_set, cuisine, ingredient_list, datum, counts):
         score = 0.0
@@ -125,16 +213,17 @@ class CustomScoreModel(Model):
             score += times_ingredient_in_cuisine/recipes_in_cuisine - times_ingredient_not_in_cuisine/recipes_not_in_cuisine
         return score
 
+    def featurize(self, data):
+        return data
 
-    #TODO: BROKEN. ADAPT TO NEW DESIGN.
-    def predict(self, p, data):
+    def predict(self, data):
         predictions = []
         print "Length of dataset predictions", len(data)
         for datum in data:
             curr_best_prediction = "ERROR"
             curr_best_score = float("-inf")
-            for cuisine in p.cuisines_set:
-                score = self.calculate_score(p.cuisines, p.cuisines_set, cuisine, p.ingredient_list, datum, p.counts)
+            for cuisine in self.p.cuisines_set:
+                score = self.tfidf(self.p.cuisines, self.p.cuisines_set, cuisine, self.p.ingredient_list, datum, self.p.counts)
                 if score > curr_best_score:
                     curr_best_score = score
                     curr_best_prediction = cuisine
@@ -275,7 +364,8 @@ def main():
               RandomGuessModel(cuisines=list(p.cuisines_set)),
               RandomForestModel(),
               LogisticRegressionModel(),
-              LogisticRegressionModelTfidf(sublinear_tf=True, norm="l2")
+              LogisticRegressionModelTfidf(sublinear_tf=True, norm="l2"),
+              CustomScoreModel(p),
               ]
 
     # calculate correct labels for error calc later

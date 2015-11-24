@@ -1,1 +1,1 @@
-# venturecapital-machine-learning
+# What Cuisine? Classifying cuisines based on recipes using multi-class classification

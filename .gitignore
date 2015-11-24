@@ -1,3 +1,6 @@
 data/*
 .idea/*
 *.ipynb
+*.csv
+*.png
+*.pyc

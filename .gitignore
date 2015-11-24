@@ -1,8 +1,6 @@
 data/*
 .idea/*
 *.ipynb
-
+*.csv
 *.png
-*.jpg
-
 *.pyc

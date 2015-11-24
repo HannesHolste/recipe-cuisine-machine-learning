@@ -19,22 +19,25 @@ class Preprocess:
     counts = defaultdict(int)
     food_adjectives = []
 
-    def __init__(self):
+    def __init__(self, filepath):
         self.load_food_adjectives()
-        self.load_data(func_process_ingredient=self.process_ingredient)
+        self.load_data(filepath=filepath, func_process_ingredient=self.process_ingredient)
 
 
-    def load_food_adjectives(self):
+    @staticmethod
+    def load_food_adjectives():
         for l in open('data/food_adjectives.txt', 'r'):
             if len(l) > 0:
-                self.food_adjectives.append(l.replace("\n", ""))
+                Preprocess.food_adjectives.append(l.replace("\n", ""))
 
-    def parseData(self, fname):
+    @staticmethod
+    def parseData(fname):
         with open(fname) as data_file:
             data = json.load(data_file)
             return data
 
-    def process_ingredient(self, ingredient_name):
+    @staticmethod
+    def process_ingredient(ingredient_name):
         # strip unicode e.g. \u2012
         ingredient_name = ingredient_name.decode('unicode_escape').encode('ascii','ignore')
 
@@ -45,9 +48,11 @@ class Preprocess:
         # e.g. ( 3  oz.) tomato paste
         ingredient_name = regex.sub(ur"\(.+\)", "", ingredient_name)
 
+        if len(Preprocess.food_adjectives) == 0:
+            Preprocess.load_food_adjectives()
 
         # remove food adjectives
-        for adjective in self.food_adjectives:
+        for adjective in Preprocess.food_adjectives:
             # only substitute adjectives if they appear as independent words, e.g. replace "or" in "toast or bacon", not "pORk"
             ingredient_name = regex.sub(u"(" + adjective + " |" + adjective + " )", " ", ingredient_name)
 
@@ -57,9 +62,9 @@ class Preprocess:
         # remove preceding and trailing spaces
         return ingredient_name.strip()
 
-    def load_data(self, func_process_ingredient=lambda s: s):
-        default_data_dir = "data/train.json"
-        self.data = self.parseData(default_data_dir)
+    def load_data(self, filepath, func_process_ingredient=lambda s: s):
+        default_data_dir = filepath
+        self.data = Preprocess.parseData(default_data_dir)
         clean_data = list()
 
         # For each recipe...

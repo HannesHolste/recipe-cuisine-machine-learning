@@ -247,6 +247,39 @@ class LogisticRegressionModelTfidf(LogisticRegressionModel):
 
 MILLISECS_TO_SECS_DIVISOR = 1000
 
+def get_confusion_matrix(model, data, cuisines_set):
+    labels = list(cuisines_set)
+    C = [[0.0 for i in range(len(labels))] for j in range(len(labels))]
+    label_counts = [0.0] * len(labels)
+    for datum in data:
+        j = labels.index(datum['cuisine'])
+        i = labels.index(model.predict(model.featurize([datum]))[0])
+        C[i][j] += 1.0
+        label_counts[j] += 1.0
+
+    for i in range(0, len(labels)):
+        for j in range(0, len(labels)):
+            C[i][j] = C[i][j]/label_counts[j]
+    return (C, labels)
+
+def print_confusion_matrix_latex(cuisine_mapping, C):
+    header = ""
+    for i in range(0, len(cuisine_mapping)):
+        if i == len(cuisine_mapping) - 1:
+            header += cuisine_mapping[i] + " \\\\ " + "\n \\hline"
+        else:
+            header += cuisine_mapping[i] + " & "
+    print header
+    for i in range (0, len(cuisine_mapping)):
+        row = ""
+        for j in range(0, len(cuisine_mapping)):
+            if j == len(cuisine_mapping) - 1:
+                row += str("{0:.3f}".format(C[i][j])) + " \\\\ " + "\n \\hline"
+            else:
+                row += str("{0:.3f}".format(C[i][j])) + " & "
+        print row
+
+
 def main():
     print "====================="
     print "What Cuisine?"
@@ -257,7 +290,7 @@ def main():
     # preprocess
     print "Preprocessing data (reading, cleansing)..."
     start = time.time()
-    p = Preprocess()
+    p = Preprocess('data/train.json')
     data = p.data
     total = len(data)
     TRAIN_SET_SIZE = int(total * 0.8)
@@ -315,6 +348,10 @@ def main():
 
         print "\t Calculating validation set error..."
         print "\t Error rate: %f" % model.calc_error(Y_predicted, Y_actual_validation)
+
+        # how to use this
+        #(C, mapping) = get_confusion_matrix(model, data_validation, p.cuisines_set)
+        #print_confusion_matrix_latex(mapping, C)
 
 
 main()

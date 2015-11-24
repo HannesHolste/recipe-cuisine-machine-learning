@@ -146,18 +146,21 @@ class CustomScoreModel(Model):
 
 
 class RandomForestModel(Model):
-    random_forest = RandomForestClassifier()
+    random_forest = None
     label_encoder = LabelEncoder()
     TOKEN_INGREDIENT_SEPARATOR = "|"
     ngram_vectorizer = None
+    n_estimators = 10
 
-    def __init__(self):
+    def __init__(self, n_estimators=10):
+        self.n_estimators=n_estimators
         # initialize ngram vectorizer with custom tokenizer
         self.ngram_vectorizer = CountVectorizer(tokenizer=lambda s: s.split(self.TOKEN_INGREDIENT_SEPARATOR))
+        self.random_forest = RandomForestClassifier(n_estimators=n_estimators)
         return
 
     def get_name(self):
-        return "Random Forest Classifier with bag-of-ingredients (unigrams)"
+        return "Random Forest Classifier (n_estimators=%f) with bag-of-ingredients (unigrams)" % self.n_estimators
 
     def featurize(self, data):
         data_X = [self.TOKEN_INGREDIENT_SEPARATOR.join(r['ingredients']) for r in data]
@@ -182,18 +185,20 @@ class RandomForestModel(Model):
         return self.label_encoder.inverse_transform(Y_predicted)
 
 class LogisticRegressionModel(Model):
-    logistic_regression = LogisticRegression()
+    logistic_regression = None
     label_encoder = LabelEncoder()
     TOKEN_INGREDIENT_SEPARATOR = "|"
     ngram_vectorizer = None
 
-    def __init__(self):
+    def __init__(self, C=1.0):
+        self.logistic_regression = LogisticRegression(C=C)
+
         # initialize ngram vectorizer with custom tokenizer
         self.ngram_vectorizer = CountVectorizer(tokenizer=lambda s: s.split(self.TOKEN_INGREDIENT_SEPARATOR))
         return
 
     def get_name(self):
-        return "Logistic Regression with bag-of-ingredients (unigrams)"
+        return "Logistic Regression (C=%f) with bag-of-ingredients (unigrams)" % self.logistic_regression.C
 
     def featurize(self, data):
         data_X = [self.TOKEN_INGREDIENT_SEPARATOR.join(r['ingredients']) for r in data]
@@ -220,13 +225,13 @@ class LogisticRegressionModel(Model):
 class LogisticRegressionModelTfidf(LogisticRegressionModel):
     tfidf = None
 
-    def __init__(self, sublinear_tf=False, norm=None):
-        super(self.__class__, self).__init__()
+    def __init__(self, sublinear_tf=False, norm=None, C=1.0):
+        super(self.__class__, self).__init__(C)
         self.tfidf = TfidfTransformer(sublinear_tf=sublinear_tf, norm=norm)
 
 
     def get_name(self):
-        return "Logistic Regression with bag of ingredients (unigrams) and tf-idf"
+        return "Logistic Regression (C=%f) with bag of ingredients (unigrams) and tf-idf" % self.logistic_regression.C
 
     def featurize(self, data):
         data_X = [self.TOKEN_INGREDIENT_SEPARATOR.join(r['ingredients']) for r in data]
@@ -306,9 +311,18 @@ def main():
     # Run models
     models = [BaselineModel(),
               RandomGuessModel(cuisines=list(p.cuisines_set)),
-              RandomForestModel(),
-            #  LogisticRegressionModel(),
-             # LogisticRegressionModelTfidf(sublinear_tf=True, norm="l2")
+              RandomForestModel(n_estimators=10),
+              RandomForestModel(n_estimators=20),
+              RandomForestModel(n_estimators=50),
+              RandomForestModel(n_estimators=100),
+              LogisticRegressionModel(C=0.01),
+              LogisticRegressionModel(C=0.1),
+              LogisticRegressionModel(C=0.5),
+              LogisticRegressionModel(C=1.0), #best hyperparameter
+              LogisticRegressionModel(C=2.0),
+              LogisticRegressionModel(C=10.0),
+              LogisticRegressionModel(C=100.0),
+              LogisticRegressionModelTfidf(sublinear_tf=True, norm="l2")
               ]
 
     # calculate correct labels for error calc later

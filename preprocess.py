@@ -21,7 +21,8 @@ class Preprocess:
 
     def __init__(self):
         self.load_food_adjectives()
-        self.load_data(func_process_ingredient=self.process_ingredient)
+        #self.load_data(func_process_ingredient=self.process_ingredient)
+        self.load_data()
 
 
     def load_food_adjectives(self):

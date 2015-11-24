@@ -68,7 +68,19 @@ def tfidf(cuisines_list, cuisine_set, cuisine, ingredient_list, datum, counts):
     return score
 
 
+def tfidf1(cuisines_list, cuisine_set, cuisine, ingredient_list, ingredient, counts):
+    score = 0.0
+    length = 0.0
+    for c in cuisine_set:
+        length += len(cuisines_list[c])
 
+    
+    ingredient = ingredient.lower()
+    tf = counts[(cuisine, ingredient)]
+    df = float(len(ingredient_list[ingredient]))
+    idf = math.log(length/df)
+    score += tf * idf
+    return score
 
 def get_prediction(p, data):
     predictions = []
@@ -100,7 +112,9 @@ def main():
     print "Error Rate:", calc_error(predictions, correct_answers)
     baseline = ['italian'] * len(validation_set)
     print "Baseline Error Rate:", calc_error(baseline, correct_answers)
-    p.print_info()
+    for c in p.cuisines_set:
+        print c, tfidf1(p.cuisines, p.cuisines_set, c, p.ingredient_list, "flat leaf parsley", p.counts)
+
 
 
 main()

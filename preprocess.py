@@ -1,10 +1,12 @@
 import json
-from pprint import pprint
+import cPickle
 from collections import defaultdict
 
 import regex
-
+import os
 import sys
+
+from fileio import md5
 
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -37,6 +39,8 @@ class Preprocess:
             return data
 
     @staticmethod
+    # IMPORTANT NOTE: If you change this preprocessing code,
+    # you must delete data/train.json.cached, so the cache of processed training data is invalidated
     def process_ingredient(ingredient_name):
         # strip unicode e.g. \u2012
         ingredient_name = ingredient_name.decode('unicode_escape').encode('ascii','ignore')
@@ -62,44 +66,80 @@ class Preprocess:
         # remove preceding and trailing spaces
         return ingredient_name.strip()
 
+
     def load_data(self, filepath, func_process_ingredient=lambda s: s):
         default_data_dir = filepath
-        self.data = Preprocess.parseData(default_data_dir)
-        clean_data = list()
 
-        # For each recipe...
-        for datum in self.data:
-            clean_datum = dict()
 
-            # process cuisine
-            cuisine = datum['cuisine'].lower()
-            clean_datum["cuisine"] = cuisine
+        # check if we have a cached version
+        filepath_cached = filepath + ".cached"
+        filepath_checksum = filepath + ".chksum"
 
-            self.cuisines[cuisine].append(datum)
-            self.cuisines_set.add(cuisine)
+        cache_exists = os.path.isfile(filepath_cached)
+        cached_checksum = None
+        if os.path.isfile(filepath_checksum):
+            cached_checksum = open(filepath_checksum, "r").read()
 
-            # process ingredients
-            ingredients = datum['ingredients']
-            clean_ingredients = list()
+        # if cache exists and is up to date
+        if cache_exists and md5(filepath) == cached_checksum:
+            # deserialize data object
+            self.data = cPickle.load(open(filepath_cached, "rb")) # read as binary
+            for recipe in self.data:
+                cuisine = recipe["cuisine"]
+                self.cuisines[cuisine].append(recipe)
+                self.cuisines_set.add(cuisine)
+                for ingredient in recipe["ingredients"]:
+                    self.ingredient_set.add(ingredient)
+                    self.counts[(cuisine,ingredient)] += 1
+                    self.ingredient_list[ingredient].append(recipe)
 
-            for ingredient in ingredients:
-                # always lowercase ingredient names
-                ingredient = ingredient.lower()
+            print "(loaded processed file %s from cache)" % filepath
+        else:
+            # else: preprocess and dump new cached version
+            self.data = Preprocess.parseData(default_data_dir)
+            clean_data = list()
 
-                # clean up ingredient string
-                ingredient = func_process_ingredient(ingredient)
+            # For each recipe...
+            for datum in self.data:
+                clean_datum = dict()
 
-                clean_ingredients.append(ingredient)
+                # process cuisine
+                cuisine = datum['cuisine'].lower()
+                clean_datum["cuisine"] = cuisine
 
-                self.counts[(cuisine,ingredient)] += 1
-                self.ingredient_list[ingredient].append(datum)
-                self.ingredient_set.add(ingredient)
+                self.cuisines[cuisine].append(datum)
+                self.cuisines_set.add(cuisine)
 
-            clean_datum["ingredients"] = clean_ingredients
+                # process ingredients
+                ingredients = datum['ingredients']
+                clean_ingredients = list()
 
-            clean_data.append(clean_datum)
+                for ingredient in ingredients:
+                    # always lowercase ingredient names
+                    ingredient = ingredient.lower()
 
-        self.data = clean_data
+                    # clean up ingredient string
+                    ingredient = func_process_ingredient(ingredient)
+
+                    clean_ingredients.append(ingredient)
+
+                    self.counts[(cuisine,ingredient)] += 1
+                    self.ingredient_list[ingredient].append(datum)
+                    self.ingredient_set.add(ingredient)
+
+                clean_datum["ingredients"] = clean_ingredients
+
+                clean_data.append(clean_datum)
+
+            self.data = clean_data
+
+            # cache data
+            cPickle.dump(self.data, open(filepath_cached, "wb")) # write binary
+
+            # update cached checksum
+            checksum = md5(filepath)
+            open(filepath_checksum, "w").write(checksum)
+
 
 
     def print_info(self):

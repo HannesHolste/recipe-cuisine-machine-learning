@@ -1,6 +1,8 @@
 from abc import abstractmethod
 
 import time
+from collections import defaultdict
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.linear_model import LogisticRegression
@@ -84,7 +86,7 @@ class CustomScoreModel1(Model):
         return "Normalized tf-idf Ranking of Ingredients"
 
     def train(self, data_train):
-        return 
+        return
 
     def tfidf_max_normalized(self, cuisines_list, cuisine_set, ingredient_list, datum, counts):
         score = 0.0
@@ -110,7 +112,7 @@ class CustomScoreModel1(Model):
             for (score, cuisine) in a:
                 if score < minimum:
                     minimum = score
-            
+
             normalized_a = [(score/( 1), cuisine1) for (score, cuisine1) in a]
 
             for i in range(0, len(score_board)):
@@ -152,7 +154,7 @@ class CustomScoreModel(Model):
         return "Vanilla tf-idf Ranking of Ingredients"
 
     def train(self, data_train):
-        return 
+        return
 
     def calculate_score1(self, cuisines_list, cuisine_set, cuisine, ingredient_list, ingredient, counts):
         score = 0.0
@@ -334,7 +336,38 @@ class LogisticRegressionModelTfidf(LogisticRegressionModel):
         self.logistic_regression.fit(X_train, Y_train)
         return
 
-MILLISECS_TO_SECS_DIVISOR = 1000
+def predict_and_output_csv(model):
+    print "Training model %s, and predicting, and outputting predictions" % model.get_name()
+    print "Model: ", model.get_name()
+
+    raw_test_data = Preprocess.parseData("data/test.json")
+    data_test = list()
+    ids = []
+    for recipe in raw_test_data:
+        clean_recipe = defaultdict(list)
+        ids.append(recipe["id"])
+        for ingredient in recipe["ingredients"]:
+            clean_ingredient = Preprocess.process_ingredient(ingredient)
+            clean_recipe["ingredients"].append(clean_ingredient)
+        data_test.append(clean_recipe)
+
+    print "\tMaking %d predictions on test set..." % len(data_test)
+    Y_predicted = model.predict(model.featurize(data_test))
+
+    # format data for output
+    print "\tOutputting predictions..."
+    header = "id,cuisine"
+    with open("test_set_predictions.csv","w") as f:
+        f.write(header + "\n")
+        i = 0
+        for prediction in Y_predicted:
+            id = ids[i]
+            predicted_cuisine = prediction
+            f.write(str(id) + "," + predicted_cuisine + "\n")
+            i += 1
+    return
+
+
 
 def main():
     print "====================="
@@ -346,7 +379,7 @@ def main():
     # preprocess
     print "Preprocessing data (reading, cleansing)..."
     start = time.time()
-    p = Preprocess()
+    p = Preprocess("data/train.json")
     data = p.data
     total = len(data)
     TRAIN_SET_SIZE = int(total * 0.8)
@@ -371,6 +404,9 @@ def main():
     # calculate correct labels for error calc later
     Y_actual_validation = [datum['cuisine'] for datum in data_validation]
     Y_actual_train = [datum['cuisine'] for datum in data_train]
+
+    best_model = None
+    lowest_error = float("inf")
 
     print "Models to be run: ", ", ".join([model.get_name() for model in models])
     for model in models:
@@ -403,8 +439,21 @@ def main():
         end = time.time()
         print "\tDone (%d s)\n" % ((end - start))
 
+        error = model.calc_error(Y_predicted, Y_actual_validation)
         print "\t Calculating validation set error..."
-        print "\t Error rate: %f" % model.calc_error(Y_predicted, Y_actual_validation)
+        print "\t Error rate: %f" % error
+
+        # save best model
+        if best_model == None or error < lowest_error:
+            lowest_error = error
+            best_model = model
+
+    print "\n\nBest model: %s with error of %f" % (best_model.get_name(), lowest_error)
+
+    print "\nTraining best model and running on test set, then outputting...\n"
+
+    predict_and_output_csv(model=best_model)
+
 
 
 main()

@@ -90,30 +90,29 @@ class CustomScoreModel1(Model):
 
     def tfidf_max_normalized(self, cuisines_list, cuisine_set, ingredient_list, datum, counts):
         score = 0.0
-        length = 0.0
         score_board = []
         index_of_cuisine = []
         for c in cuisine_set:
-            length += len(cuisines_list[c])
             score_board.append((0.0, c))
             index_of_cuisine.append(c)
 
+        length = len(cuisine_set)
         counter = 0
 
         for ingredient in datum['ingredients']:
             a = []
             for cuisine in cuisine_set:
                 tf = counts[(cuisine, ingredient)]
-                df = float(len(ingredient_list[ingredient]))
+                df = float(sum([int(counts[(c, ingredient)] > 0) for c in cuisine_set]))
                 idf = math.log(length/df)
                 score += tf * idf
                 a.append((score,cuisine))
             minimum = float("inf")
             for (score, cuisine) in a:
-                if score < minimum:
+                if score > 0 and score < minimum:
                     minimum = score
 
-            normalized_a = [(score/( 1), cuisine1) for (score, cuisine1) in a]
+            normalized_a = [(score/(minimum+1), cuisine1) for (score, cuisine1) in a]
 
             for i in range(0, len(score_board)):
                 (prev_score, cuisine1) = normalized_a[i]
@@ -181,13 +180,11 @@ class CustomScoreModel(Model):
 
     def tfidf(self, cuisines_list, cuisine_set, cuisine, ingredient_list, datum, counts):
         score = 0.0
-        length = 0.0
-        for c in cuisine_set:
-            length += len(cuisines_list[c])
 
+        length = len(cuisines_list)
         for ingredient in datum['ingredients']:
             tf = counts[(cuisine, ingredient)]
-            df = float(len(ingredient_list[ingredient]))
+            df = float(sum([int(counts[(c, ingredient)] > 0) for c in cuisine_set]))
             idf = math.log(length/df)
             score += tf * idf
         return score
@@ -393,12 +390,7 @@ def main():
     data_validation = data[TRAIN_SET_SIZE:total]
 
     # Run models
-    models = [BaselineModel(),
-              RandomGuessModel(cuisines=list(p.cuisines_set)),
-              RandomForestModel(),
-              LogisticRegressionModel(),
-              LogisticRegressionModelTfidf(sublinear_tf=True, norm="l2"),
-              CustomScoreModel(p),
+    models = [CustomScoreModel1(p)
               ]
 
     # calculate correct labels for error calc later
@@ -452,7 +444,7 @@ def main():
 
     print "\nTraining best model and running on test set, then outputting...\n"
 
-    predict_and_output_csv(model=best_model)
+    #predict_and_output_csv(model=best_model)
 
 
 

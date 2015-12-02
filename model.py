@@ -8,7 +8,9 @@ from sklearn.preprocessing import LabelEncoder
 
 from preprocess import Preprocess
 import random
-
+import numpy as np
+import matplotlib as ml
+import matplotlib.pyplot as plt
 
 class Model(object):
     def __init__(self):
@@ -263,21 +265,25 @@ def get_confusion_matrix(model, data, cuisines_set):
     return (C, labels)
 
 def print_confusion_matrix_latex(cuisine_mapping, C):
-    header = ""
+    print "<htm><body><table>"
+    header = "<tr>" + "<td>Confusion Matrix</td>"
     for i in range(0, len(cuisine_mapping)):
-        if i == len(cuisine_mapping) - 1:
-            header += cuisine_mapping[i] + " \\\\ " + "\n \\hline"
-        else:
-            header += cuisine_mapping[i] + " & "
+        header += "<td>" + cuisine_mapping[i] + "</td>"
+    header += "</tr>"
     print header
+    
     for i in range (0, len(cuisine_mapping)):
-        row = ""
+        row = "<tr>" + "<td>" + cuisine_mapping[i] + "</td>"
         for j in range(0, len(cuisine_mapping)):
+            row += "<td>"
             if j == len(cuisine_mapping) - 1:
-                row += str("{0:.3f}".format(C[i][j])) + " \\\\ " + "\n \\hline"
+                row += str("{0:.3f}".format(C[i][j])) 
             else:
-                row += str("{0:.3f}".format(C[i][j])) + " & "
+                row += str("{0:.3f}".format(C[i][j]))
+            row += "</td>"
+        row += "</tr>"
         print row
+    print "</table></body></html>" 
 
 
 def main():
@@ -304,10 +310,10 @@ def main():
     data_validation = data[TRAIN_SET_SIZE:total]
 
     # Run models
-    models = [BaselineModel(),
-              RandomGuessModel(cuisines=list(p.cuisines_set)),
-              RandomForestModel(),
-              LogisticRegressionModel(),
+    models = [#BaselineModel(),
+              #RandomGuessModel(cuisines=list(p.cuisines_set)),
+              #RandomForestModel(),
+              #LogisticRegressionModel(),
               LogisticRegressionModelTfidf(sublinear_tf=True, norm="l2")
               ]
 
@@ -350,8 +356,8 @@ def main():
         print "\t Error rate: %f" % model.calc_error(Y_predicted, Y_actual_validation)
 
         # how to use this
-        #(C, mapping) = get_confusion_matrix(model, data_validation, p.cuisines_set)
-        #print_confusion_matrix_latex(mapping, C)
+        (C, mapping) = get_confusion_matrix(model, data_validation, p.cuisines_set)
+        print_confusion_matrix_latex(mapping, C)
 
 
 main()
